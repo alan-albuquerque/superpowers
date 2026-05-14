@@ -4,8 +4,10 @@ Use this template when dispatching a spec compliance reviewer subagent.
 
 **Purpose:** Verify implementer built what was requested (nothing more, nothing less)
 
+Use the reviewer `subagent_type` chosen at the start of the session per SKILL.md "Selecting Subagent Types" (default `general-purpose`).
+
 ```
-Task tool (general-purpose):
+Task tool (subagent_type = <reviewer_type chosen in SKILL.md "Selecting Subagent Types">):
   description: "Review spec compliance for Task N"
   prompt: |
     You are reviewing whether an implementation matches its specification.

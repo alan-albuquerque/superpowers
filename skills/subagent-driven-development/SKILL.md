@@ -47,44 +47,57 @@ digraph process {
 
     subgraph cluster_per_task {
         label="Per Task";
-        "Dispatch implementer subagent (./implementer-prompt.md)" [shape=box];
+        "Dispatch implementer subagent <implementer_type> (./implementer-prompt.md)" [shape=box];
         "Implementer subagent asks questions?" [shape=diamond];
         "Answer questions, provide context" [shape=box];
         "Implementer subagent implements, tests, commits, self-reviews" [shape=box];
-        "Dispatch spec reviewer subagent (./spec-reviewer-prompt.md)" [shape=box];
+        "Dispatch spec reviewer subagent <reviewer_type> (./spec-reviewer-prompt.md)" [shape=box];
         "Spec reviewer subagent confirms code matches spec?" [shape=diamond];
         "Implementer subagent fixes spec gaps" [shape=box];
-        "Dispatch code quality reviewer subagent (./code-quality-reviewer-prompt.md)" [shape=box];
+        "Dispatch code quality reviewer subagent <reviewer_type> (./code-quality-reviewer-prompt.md)" [shape=box];
         "Code quality reviewer subagent approves?" [shape=diamond];
         "Implementer subagent fixes quality issues" [shape=box];
         "Mark task complete in TodoWrite" [shape=box];
     }
 
     "Read plan, extract all tasks with full text, note context, create TodoWrite" [shape=box];
+    "Ask user for implementer + reviewer subagent_type (default general-purpose)" [shape=box];
     "More tasks remain?" [shape=diamond];
-    "Dispatch final code reviewer subagent for entire implementation" [shape=box];
+    "Dispatch final reviewer subagent <reviewer_type> for entire implementation" [shape=box];
     "Use superpowers:finishing-a-development-branch" [shape=box style=filled fillcolor=lightgreen];
 
-    "Read plan, extract all tasks with full text, note context, create TodoWrite" -> "Dispatch implementer subagent (./implementer-prompt.md)";
-    "Dispatch implementer subagent (./implementer-prompt.md)" -> "Implementer subagent asks questions?";
+    "Read plan, extract all tasks with full text, note context, create TodoWrite" -> "Ask user for implementer + reviewer subagent_type (default general-purpose)";
+    "Ask user for implementer + reviewer subagent_type (default general-purpose)" -> "Dispatch implementer subagent <implementer_type> (./implementer-prompt.md)";
+    "Dispatch implementer subagent <implementer_type> (./implementer-prompt.md)" -> "Implementer subagent asks questions?";
     "Implementer subagent asks questions?" -> "Answer questions, provide context" [label="yes"];
-    "Answer questions, provide context" -> "Dispatch implementer subagent (./implementer-prompt.md)";
+    "Answer questions, provide context" -> "Dispatch implementer subagent <implementer_type> (./implementer-prompt.md)";
     "Implementer subagent asks questions?" -> "Implementer subagent implements, tests, commits, self-reviews" [label="no"];
-    "Implementer subagent implements, tests, commits, self-reviews" -> "Dispatch spec reviewer subagent (./spec-reviewer-prompt.md)";
-    "Dispatch spec reviewer subagent (./spec-reviewer-prompt.md)" -> "Spec reviewer subagent confirms code matches spec?";
+    "Implementer subagent implements, tests, commits, self-reviews" -> "Dispatch spec reviewer subagent <reviewer_type> (./spec-reviewer-prompt.md)";
+    "Dispatch spec reviewer subagent <reviewer_type> (./spec-reviewer-prompt.md)" -> "Spec reviewer subagent confirms code matches spec?";
     "Spec reviewer subagent confirms code matches spec?" -> "Implementer subagent fixes spec gaps" [label="no"];
-    "Implementer subagent fixes spec gaps" -> "Dispatch spec reviewer subagent (./spec-reviewer-prompt.md)" [label="re-review"];
-    "Spec reviewer subagent confirms code matches spec?" -> "Dispatch code quality reviewer subagent (./code-quality-reviewer-prompt.md)" [label="yes"];
-    "Dispatch code quality reviewer subagent (./code-quality-reviewer-prompt.md)" -> "Code quality reviewer subagent approves?";
+    "Implementer subagent fixes spec gaps" -> "Dispatch spec reviewer subagent <reviewer_type> (./spec-reviewer-prompt.md)" [label="re-review"];
+    "Spec reviewer subagent confirms code matches spec?" -> "Dispatch code quality reviewer subagent <reviewer_type> (./code-quality-reviewer-prompt.md)" [label="yes"];
+    "Dispatch code quality reviewer subagent <reviewer_type> (./code-quality-reviewer-prompt.md)" -> "Code quality reviewer subagent approves?";
     "Code quality reviewer subagent approves?" -> "Implementer subagent fixes quality issues" [label="no"];
-    "Implementer subagent fixes quality issues" -> "Dispatch code quality reviewer subagent (./code-quality-reviewer-prompt.md)" [label="re-review"];
+    "Implementer subagent fixes quality issues" -> "Dispatch code quality reviewer subagent <reviewer_type> (./code-quality-reviewer-prompt.md)" [label="re-review"];
     "Code quality reviewer subagent approves?" -> "Mark task complete in TodoWrite" [label="yes"];
     "Mark task complete in TodoWrite" -> "More tasks remain?";
-    "More tasks remain?" -> "Dispatch implementer subagent (./implementer-prompt.md)" [label="yes"];
-    "More tasks remain?" -> "Dispatch final code reviewer subagent for entire implementation" [label="no"];
-    "Dispatch final code reviewer subagent for entire implementation" -> "Use superpowers:finishing-a-development-branch";
+    "More tasks remain?" -> "Dispatch implementer subagent <implementer_type> (./implementer-prompt.md)" [label="yes"];
+    "More tasks remain?" -> "Dispatch final reviewer subagent <reviewer_type> for entire implementation" [label="no"];
+    "Dispatch final reviewer subagent <reviewer_type> for entire implementation" -> "Use superpowers:finishing-a-development-branch";
 }
 ```
+
+## Selecting Subagent Types
+
+Before dispatching the first task, ask the user once which `subagent_type` to use for each role. Use `AskUserQuestion` with two questions, both defaulting to `general-purpose` (the existing strategy):
+
+1. *Which subagent_type should run implementer tasks?* List `general-purpose` first as Recommended; offer 1-2 other installed agents that suit implementation work (e.g. `code-simplifier:code-simplifier`, `feature-dev:code-architect`) if they exist.
+2. *Which subagent_type should run review tasks (spec compliance, code quality, and final review)?* List `general-purpose` first as Recommended; offer relevant reviewer agents (e.g. `feature-dev:code-reviewer`) if they exist.
+
+Reuse the same two values for every dispatch in this session: implementer tasks always use the chosen *implementer_type*, all three review dispatches (spec compliance, code quality, final) always use the chosen *reviewer_type*. Don't ask again per task; if a specific task genuinely needs a more capable agent, escalate per the BLOCKED handling instead.
+
+If the user has already given you the choices in this conversation, skip the question.
 
 ## Model Selection
 
@@ -133,6 +146,12 @@ You: I'm using Subagent-Driven Development to execute this plan.
 [Read plan file once: docs/superpowers/plans/feature-plan.md]
 [Extract all 5 tasks with full text and context]
 [Create TodoWrite with all tasks]
+
+[Ask user for subagent_type choices via AskUserQuestion]
+You: Which subagent_type for implementer? (default: general-purpose)
+You: Which subagent_type for reviewer? (default: general-purpose)
+
+User: implementer = general-purpose, reviewer = feature-dev:code-reviewer
 
 Task 1: Hook installation script
 
