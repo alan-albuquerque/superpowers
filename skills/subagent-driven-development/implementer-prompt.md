@@ -2,8 +2,10 @@
 
 Use this template when dispatching an implementer subagent.
 
+Use the implementer `subagent_type` chosen at the start of the session per SKILL.md "Selecting Subagent Types" (default `general-purpose`).
+
 ```
-Task tool (general-purpose):
+Task tool (subagent_type = <implementer_type chosen in SKILL.md "Selecting Subagent Types">):
   description: "Implement Task N: [task name]"
   prompt: |
     You are implementing Task N: [task name]

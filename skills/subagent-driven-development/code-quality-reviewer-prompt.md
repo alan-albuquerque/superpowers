@@ -6,8 +6,10 @@ Use this template when dispatching a code quality reviewer subagent.
 
 **Only dispatch after spec compliance review passes.**
 
+Use the reviewer `subagent_type` chosen at the start of the session per SKILL.md "Selecting Subagent Types" (default `general-purpose`).
+
 ```
-Task tool (general-purpose):
+Task tool (subagent_type = <reviewer_type chosen in SKILL.md "Selecting Subagent Types">):
   Use template at requesting-code-review/code-reviewer.md
 
   DESCRIPTION: [task summary, from implementer's report]
